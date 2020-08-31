@@ -1,0 +1,6 @@
+{
+    "python.pythonPath": "/Users/arcuate/anaconda3/envs/3p8/bin/python",
+    "python.linting.pylintEnabled": false,
+    "python.linting.flake8Enabled": true,
+    "python.linting.enabled": true
+}
