@@ -44,15 +44,15 @@ def load_tandem(tandem_fn):
                 continue
             else:
                 if 't:slim X2 Insulin Pump OUS' in row[0] and 'EGV' in row[2]:
-                    tandem_dict[1].append(row)
+                    tandem_dict[1].append(row[:6])
                 if 't:slim X2 Insulin Pump OUS' in row[0] and 'BG' in row[2]:
                     tandem_dict[2].append(row)
                 if 'IOB' in row[0]:
-                    tandem_dict[3].append(row)
+                    tandem_dict[3].append(row[:4])
                 if 'Basal' in row[0]:
-                    tandem_dict[4].append(row)
+                    tandem_dict[4].append(row[:3])
                 if 'Bolus' in row[0]:
-                    tandem_dict[5].append(row)
+                    tandem_dict[5].append(row[:41])
     return tandem_dict
 
 
@@ -112,8 +112,7 @@ def shape_tandem(tandem_dict):
                                   'EventHistoryReportEventDesc',
                                   'EventHistoryReportDetails',
                                   'NoteID',
-                                  'IndexID', 'Note', 'VOID1',
-                                  'VOID2'])
+                                  'IndexID', 'Note'])
     # shaping the continuous glucose monitor data
     egv = egv.drop(['DeviceType', 'SerialNumber', 'Description', 'VOID'],
                    axis=1)
@@ -276,6 +275,16 @@ def load_and_clean_data(clarity_fn, tandem_fn):
 
 
 def split_data(data):
+    '''
+    Split the data into training and testing sets.
+    Input:
+    * data: (dataframe) full dataset
+    Outputs:
+    * Xtrain: (dataframe)
+    * ytrain: (series)
+    * Xtest: (dataframe)
+    * ytest: (series)
+    '''
     split = int(len(data)*.75)
     ytrain = data['bg'].iloc[:split]
     Xtrain = data.loc[:, ['carb_grams', 'bolus_units']].iloc[:split, :]

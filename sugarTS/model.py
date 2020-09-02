@@ -5,8 +5,8 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
-from sugar.core import load_and_clean_example_data
-from sugar.core import split_data
+from sugarTS.core import load_and_clean_example_data
+from sugarTS.core import split_data
 from fireTS.models import NARX
 
 
@@ -19,37 +19,59 @@ class Patient():
     def __init__(self):
         self.carbs_per_insulin = 5
         self.data = load_and_clean_example_data()
-        self.target_range = (70, 100)
+        self.target_range = (80, 140)
 
     def find_optimal_bolus(self, carbs, carb_t):
         '''
-
+        Use a brute force grid search to find the optimal
+        timing and amount of insulin, given an amount and
+        timing of carbs for a meal.
+        Inputs:
+        * carbs: amount of carbs in upcoming meal
+        * carb_t: datetime object describing the timing of
+                  the upcoming meal
+        Output:
+        * Optimal: dict containing:
+                    * amount of time in range
+                    * optimal bolus amount
+                    * optimal bolus time
         '''
-        carb_targ = carbs/self.carbs_per_insulin
-        bolus_amounts = list(range(5, carb_targ+20, 5))
+        carb_targ = int(carbs/self.carbs_per_insulin)
+        bolus_amounts = list(range(1, carb_targ+20, 1))
         bolus_times = pd.date_range(start=self.Xtest.index[-1] +
                                     timedelta(minutes=5),
                                     end=carb_t, freq='5T')
+        # create grid for brute force grid search
         grid = [(r[0], r[1]) for r in itertools.product(bolus_amounts,
                                                         bolus_times)]
+        # loop through permutations and check forecast against target_range
         in_range = list()
         for b, b_t in grid:
-            X_future = self.build_x_future(self, carbs, carb_t, b, b_t)
-            ypred = self.forecast(self, X_future)
-            in_range.append(np.logical_and(ypred > self.target_range[0],
-                                           ypred < self.target_range[1]).sum())
-        max_mask = [x in max(in_range) for x in in_range]
-        optimal_pair = [i for i, j in zip(grid, max_mask) if j]
+            X_future = self.build_x_future(carbs, carb_t, b, b_t)
+            ypred = self.forecast(X_future)
+            # check performance
+            over = list(map(lambda x: x - self.target_range[1],
+                        [x for x in ypred if x > self.target_range[1]]))
+            under = list(map(lambda x: self.target_range[0] - x,
+                         [x for x in ypred if x < self.target_range[0]]))
+            # get the amount of error
+            error = sum([sum(over), sum(under)])
+            in_range.append(error)
+        # get the feature pair that maximizes time in target range
+        min_in_range = min(in_range)
+        min_ind = [i for i, x in enumerate(in_range) if x == min_in_range]
+        optimal_pair = grid[min_ind[0]]
+        # handle potential errors
         if len(optimal_pair) == 0:
             raise ValueError('Oops! Current bolus options do not result in ' +
                              'forecasted blood glucose in target range.' +
                              'Try new bolus options')
             return -1
-        if len(optimal_pair) > 1:
-            print('Multiple bolus options result in optimal forecast. ' +
-                  'Selecting first option.')
-            optimal_pair = optimal_pair[0]
-        return optimal_pair
+        optimal = {'error': str(min_in_range),
+                   'bolus amount': optimal_pair[0],
+                   'bolus time': optimal_pair[1],
+                   'grid': grid}
+        return optimal
 
     def fit_model(self):
         '''
@@ -73,11 +95,20 @@ class Patient():
 
     def build_x_future(self, carbs, carb_t, bolus, bolus_t):
         '''
-
+        Build the future X matrix. This contains the future carbs and the
+        future bolus.
+        Inputs:
+        * carbs: (int) number of future carbs to be eaten
+        * carb_t: (datetime object) when the future carbs will be eaten
+        * bolus: (int) units of insulin to administer
+        * bolus_t: (datetime object) when the bolus will be given
+        Output:
+        * X_future: (dataframe) matrix containing future carbs and bolus.
         '''
         # make tests to ensure that carb_t and bolus_t are datetime objects
         # make a test to ensure that bolus_t is between start time and carb_t
         t_0 = self.Xtest.index[-1]+timedelta(minutes=5)
+        # assume the end of the forecast is 1 hour after carb time
         t_end = carb_t+timedelta(minutes=5*12)
         ind = pd.date_range(start=t_0, end=t_end, freq='5T')
         X_future = pd.DataFrame(np.zeros([len(ind), 2]),
