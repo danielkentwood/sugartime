@@ -120,7 +120,13 @@ class Patient():
 
     def forecast(self, X_future):
         '''
-
+        Forecast the future blood glucose by supplying information about
+        future food and future insulin.
+        Input:
+        * X_future: (dataframe) matrix containing future carbs and bolus.
+        Outpu:
+        * yforecast_narx: (array-like) vector containing forecasted
+        blood glucose values.
         '''
         steps = X_future.shape[0]+1
         yforecast_narx = self.model.forecast(self.Xtest,
