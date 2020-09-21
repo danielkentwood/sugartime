@@ -260,7 +260,7 @@ def load_and_clean_example_data():
     """
 
     # define paths
-    raw_dir = Path("./examples/raw/")
+    raw_dir = Path("./data/raw/")
     clarity_filename = raw_dir/"CLARITY.csv"
     tandem_filename = raw_dir/"TANDEM.csv"
 

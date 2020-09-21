@@ -63,26 +63,11 @@ class Patient:
             ypred = self.forecast(X_future)
 
             # check performance
-            over = list(
-                map(
-                    lambda x: x - self.target_range[1],
-                    [x for x in ypred if x > self.target_range[1]],
-                )
-            )
-            under = list(
-                map(
-                    lambda x: self.target_range[0] - x,
-                    [x for x in ypred if x < self.target_range[0]],
-                )
-            )
-
-            # get the amount of error
-            error = sum(itertools.chain(over, under))
+            error = sum([(x-110)**2 for x in ypred])
             in_range.append(error)
 
         # get the feature pair that maximizes time in target range
-        min_in_range = min(in_range)
-        min_ind = [i for i, x in enumerate(in_range) if x == min_in_range]
+        min_ind = [i for i, x in enumerate(in_range) if x == min(in_range)]
         optimal_pair = grid[min_ind[0]]
 
         # handle potential errors
@@ -93,7 +78,7 @@ class Patient:
                 "Try new bolus options"
             )
         optimal = {
-            "error": str(min_in_range),
+            "error": str(min(in_range)),
             "bolus amount": optimal_pair[0],
             "bolus time": optimal_pair[1],
             "grid": grid,

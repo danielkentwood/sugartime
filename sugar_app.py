@@ -43,9 +43,6 @@ def main():
 
     # calculate the optimal bolus
     optimal = patient.find_optimal_bolus(carbs, carb_time)
-    # print('Current time is {}'.format(current_time))
-    # print('Give yourself a bolus of ' + str(optimal['bolus amount']) +
-    #     ' units at ' + str(optimal['bolus time']))
 
     # plot the model forecast for the optimal bolus
     bolus = optimal['bolus amount']
