@@ -2,10 +2,13 @@ import csv
 import datetime
 from collections import defaultdict
 from pathlib import Path
+import os
 
 import pandas as pd
 import numpy as np
 import sugarTS.constants as constants
+from fireTS import utils
+import plotly.graph_objects as go
 
 
 def get_datetime(df, var_name="EventDateTime", targ_name="dt"):
@@ -24,19 +27,10 @@ def get_datetime(df, var_name="EventDateTime", targ_name="dt"):
     df[var_name] = df[var_name].apply(lambda x: x[:19])
     df[targ_name] = df.apply(
         lambda row: datetime.datetime.strptime(
-            row[var_name].replace("T", " "), "%Y-%m-%d %H:%M:%S"
-        ),
+            row[var_name],
+            "%Y-%m-%dT%H:%M:%S"),
         axis=1,
     )
-
-    # df[targ_name] = df.apply(
-    #     lambda row: datetime.datetime.strptime(
-    #         row[var_name],
-    #         "%Y-%m-%dT%H:%M:%S"
-    #     ),
-    #     axis=1,
-    # )
-
     df = df.drop([var_name], axis=1)
     return df
 
@@ -106,8 +100,7 @@ def shape_tandem(tandem_dict):
         ["DeviceType", "SerialNumber", "Description", "VOID"], axis=1
     )
     estimated_glu = get_datetime(estimated_glu)
-    estimated_glu.rename(
-        columns={"bg": "estimated_glu"}, inplace=True)
+    estimated_glu.rename(columns={"bg": "estimated_glu"}, inplace=True)
 
     # shaping the basal rate data
     basal_rate = basal_rate.drop(["Type"], axis=1)
@@ -116,21 +109,18 @@ def shape_tandem(tandem_dict):
     basal_rate.drop_duplicates(subset=None, keep="first", inplace=True)
     basal_rate = basal_rate.dropna()
     basal_rate.reset_index(drop=True, inplace=True)
-    basal_rate.rename(
-        columns={"br": "basal_rate"}, inplace=True)
+    basal_rate.rename(columns={"br": "basal_rate"}, inplace=True)
 
     # shaping the insulin-on-board data
     insulin_on_board = insulin_on_board.drop(["Type", "EventID"], axis=1)
     insulin_on_board = get_datetime(insulin_on_board)
     insulin_on_board = insulin_on_board.replace("", np.nan)
-    insulin_on_board.rename(
-        columns={"iob": "insulin_on_board"}, inplace=True)
+    insulin_on_board.rename(columns={"iob": "insulin_on_board"}, inplace=True)
 
     # shaping the bolus data
     bolus = get_datetime(bolus)
     bolus = bolus[["InsulinDelivered", "dt"]]
-    bolus.rename(
-        columns={"InsulinDelivered": "bolus"}, inplace=True)
+    bolus.rename(columns={"InsulinDelivered": "bolus"}, inplace=True)
 
     return estimated_glu, basal_rate, insulin_on_board, bolus
 
@@ -176,9 +166,11 @@ def shape_clarity(clarity):
 
 
 def combine_tandem_clarity(
-    clarity, estimated_glu,
-    basal_rate, insulin_on_board, bolus
-):
+        clarity,
+        estimated_glu,
+        basal_rate,
+        insulin_on_board,
+        bolus):
     """
     Combine the tandem and clarity data into a single pandas dataframe.
     Deal with empty values.
@@ -218,21 +210,19 @@ def combine_tandem_clarity(
 
     # convert numeric values to float and resample
     data = (
-        d[["estimated_glu",
-           "basal_rate",
-           "insulin_on_board"]].astype(float).resample("5T").mean()
+        d[["estimated_glu", "basal_rate", "insulin_on_board"]]
+        .astype(float)
+        .resample("5T")
+        .mean()
     )
     data["carb_grams"] = pd.DataFrame(
         d["carb_grams"].astype(float).resample("5T").sum()
     )
-    data["bolus"] = pd.DataFrame(
-        d["bolus"].astype(float).resample("5T").sum()
-    )
+    data["bolus"] = pd.DataFrame(d["bolus"].astype(float).resample("5T").sum())
     # fill blood glucose and insulin-on-board with linearly interpolated values
     data[["estimated_glu", "insulin_on_board"]] = data[
-        ["estimated_glu", "insulin_on_board"]].interpolate(
-        method="linear", limit_direction="forward", axis=0
-    )
+        ["estimated_glu", "insulin_on_board"]
+    ].interpolate(method="linear", limit_direction="forward", axis=0)
 
     # fill basal rate NaNs with forward fill (use the most recent valid value)
     # NOTE: This may be the wrong approach. It seems unlikely that there are
@@ -242,6 +232,15 @@ def combine_tandem_clarity(
     data["carb_grams"] = data["carb_grams"].replace(np.nan, 0)
     data = data.drop(data.index[data.isnull().any(1)])
 
+    return data
+
+
+def feature_engineering(data):
+    data["all_insulin"] = data.bolus + data.basal_rate
+    data.drop(
+        ["basal_rate", "insulin_on_board", "bolus"],
+        axis=1,
+        inplace=True)
     return data
 
 
@@ -261,11 +260,44 @@ def load_and_clean_example_data():
 
     # define paths
     raw_dir = Path("./data/raw/")
-    clarity_filename = raw_dir/"CLARITY.csv"
-    tandem_filename = raw_dir/"TANDEM.csv"
+    clarity_filename = raw_dir / "CLARITY.csv"
+    tandem_filename = raw_dir / "TANDEM.csv"
 
     # load and clean example data
     data = load_and_clean_data(clarity_filename, tandem_filename)
+
+    return data
+
+
+def load_and_clean_synthetic_data():
+    """
+    Load the synthetic data.
+    Then clean it.
+
+    Outputs:
+    * data: a dataframe containing:
+        - estimated_glu: blood glucose
+        - carb_grams: number of carbs in grams
+        - all_insulin: amount of insulin in bolus and basal rate
+    """
+
+    data = pd.read_csv(os.path.join(".",
+                                    "data",
+                                    "example",
+                                    "adolescent#001.csv"))
+
+    data.rename(
+        columns={
+            "CGM": "estimated_glu",
+            "CHO": "carb_grams",
+            "insulin": "all_insulin",
+            "Time": "dt",
+        },
+        inplace=True,
+    )
+    data = data.set_index("dt")
+    data.index = pd.to_datetime(data.index)
+    data = data.apply(lambda x: x.fillna(x.median()), axis=0)
 
     return data
 
@@ -301,26 +333,151 @@ def load_and_clean_data(clarity_filename, tandem_filename):
     return data
 
 
-def split_data(data):
+def split_data(data, target_name, feature_names, split=[0.75]):
     """
-    Split the data into training and testing sets.
+    Split the data into training and testing (and maybe validation) sets.
 
     Input:
     * data: (dataframe) full dataset
-
-    Outputs:
-    * Xtrain: (dataframe)
-    * ytrain: (series)
-    * Xtest: (dataframe)
-    * ytest: (series)
+    * target_name (str) name of target column
+    * feature_names (list) names of feature columns
     """
 
-    # Do a 75/25 split for train and test sets.
+    num_rows = len(data)
     # No random sampling because it is a time series.
-    split = int(len(data) * 0.75)
-    ytrain = data["estimated_glu"].iloc[:split]
-    Xtrain = data.loc[:, ["carb_grams", "bolus"]].iloc[:split, :]
-    ytest = data["estimated_glu"].iloc[split:]
-    Xtest = data.loc[:, ["carb_grams", "bolus"]].iloc[split:, :]
+    ytrain = data[target_name].iloc[: int(num_rows * split[0])]
+    Xtrain = data[feature_names].iloc[: int(num_rows * split[0]), :]
+    ytest = data[target_name].iloc[int(num_rows * split[-1]):]
+    Xtest = data[feature_names].iloc[int(num_rows * split[-1]):, :]
 
-    return Xtrain, ytrain, Xtest, ytest
+    if len(split) == 2:
+        yval = data[target_name].iloc[
+            int(num_rows * split[0]): int(num_rows * split[1])
+        ]
+        Xval = data[feature_names].iloc[
+            int(num_rows * split[0]): int(num_rows * split[1]), :
+        ]
+        return Xtrain, ytrain, Xval, yval, Xtest, ytest
+    else:
+        return Xtrain, ytrain, Xtest, ytest
+
+
+def plot_forecast(obs, pred, return_flag=False):
+    """
+    Plots a forecast along with the observed data.
+    Takes the following:
+    * obs (dataframe): the target variable
+    * pred (dataframe): model output
+    * return_flag (logical): allows the output of the model to be either the
+    figure object or a plot of the figure.
+    """
+    obs = obs[-50:]
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=obs.index, y=obs, mode="lines", name="y"))
+    fig.add_trace(
+        go.Scatter(x=pred.index, y=pred.ypred, mode="lines", name="y_forecast")
+    )
+    fig.update_xaxes(
+        title_text="Time",
+        title_font=dict(size=18),
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+    )
+    fig.update_yaxes(
+        title_text="Blood Glucose",
+        title_font=dict(size=18),
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+    )
+    if return_flag:
+        return fig
+    else:
+        fig.show()
+
+
+def plot_optimal_boundaries(patient, fig):
+    """
+    Plots the optimal blood glucose boundaries (default at 80 and 140).
+    Takes the following:
+    * patient (obj): the patient's data
+    * fig (obj): the figure that you want to add the optimal boundaries to
+    """
+    minx = []
+    maxx = []
+    for i in fig.select_traces():
+        cminx = min(i["x"])
+        cmaxx = max(i["x"])
+        if not minx:
+            minx = cminx
+        if not maxx:
+            maxx = cmaxx
+        if cminx < minx:
+            minx = cminx
+        if cmaxx > maxx:
+            maxx = cmaxx
+    y_ind = pd.date_range(start=minx, end=maxx, freq="5T")
+    fig.add_trace(
+        go.Scatter(
+            x=y_ind,
+            y=np.ones(len(y_ind)) * patient.target_range[0],
+            mode="lines",
+            name="lower bound",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=y_ind,
+            y=np.ones(len(y_ind)) * patient.target_range[1],
+            mode="lines",
+            name="upper bound",
+        )
+    )
+    return fig
+
+
+def horizon_transform(X, y, horizon=12):
+    """
+    For each step in the horizon, adds a new column and shifts the
+    target variable one step. This allows the model to be trained
+    on arbitrary intervals into the future.
+    Takes the following:
+    * X (array): design matrix (already lag transformed)
+    * y (array): target variable
+    Returns:
+    * X (array): design matrix transformed based on number of shifts
+    * y (array): target variable transformed based on number of shifts
+    """
+    y = y.reshape(-1, 1)
+    y_horizon = np.empty((len(y), horizon))
+    y_horizon.fill(np.nan)
+    for i in range(horizon):
+        y_horizon[: -(i + 1), i] = y[(i + 1):].T
+    return X[:-horizon], y_horizon[:-horizon, :]
+
+
+def add_lags(X, y, auto_order, exog_order, exog_delay):
+    """
+    Adds lags based the orders and delays of the endogenous and exogenous
+    variables.
+    Takes the following:
+    * X (dataframe): design matrix
+    * y (dataframe): target variable
+    * auto_order (int): the autoregressive order of the model
+    * exog_order (list): the order of the exogenous variables
+    * exog_delay (list): delay of the exogenous variables
+    Returns:
+    * features (array): transformed design matrix
+    * target (array): transformed target variable
+    """
+    m = utils.MetaLagFeatureProcessor(
+        X.values, y.values, auto_order, exog_order, exog_delay
+    )
+    features = m.generate_lag_features()
+    target = utils.shift(y, -1)
+    all_data = np.concatenate([target.reshape(-1, 1), features], axis=1)
+    mask = np.isnan(all_data).any(axis=1)
+    features, target = features[~mask], target[~mask]
+
+    return features, target

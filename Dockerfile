@@ -2,7 +2,7 @@ FROM fedora
 
 RUN dnf install -y python3-pip
 
-RUN pip install tensorflow keras numpy pandas plotly scikit-learn firets
+RUN pip install numpy pandas plotly scikit-learn firets
 RUN pip install streamlit
 
 RUN mkdir /app
