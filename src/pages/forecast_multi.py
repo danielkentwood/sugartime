@@ -32,7 +32,7 @@ def write():
             this page uses a dynamic forecasting approach (due to the
             insertion of future exogenous data that must be considered
             in the forecast). This approach iteratively forecasts just one
-            step (5 minutes) ahead and then uses the predicted blood glucose
+            step (5 minutes) ahead and then uses that predicted blood glucose
             value to forecast the next step, etc.
 
             You can see that this particular model has learned that
@@ -57,20 +57,21 @@ def write():
             Similarly, why did the
             model mistakenly learn that carbs will naturally drive blood sugar
             upward (which is true) and then downward (which is false)?
-            It is possible
+            Here is another possible explanation (that is not mutually
+            exclusive with the first): it is possible
             that this patient had enough scenarios where insulin and carbs
             were given in close proximity that the model was unable to
             temporally disentangle their effects. Consequently, it attributed
-            their combined effects to both of them. That's my theory, anyway.
+            their combined effects to both of them. That's a theory, anyway.
 
-            One possible way to test this theory would be to train a model
-            only on
-            streteches of time where just insulin (and not carbs) is present.
-            If
-            this resulted in the model learning the true effect of insulin, you
+            One possible way to test these ideas would be to train a model
+            only on stretches of time where just insulin is given. You
             could then further train that model on stretches of time where only
             carbs are present. You could then test the model on data where both
-            insulin and carbs are present.
+            insulin and carbs are present. If this resulted in the model
+            learning the true effects of insulin and carbs, it would be strong
+            evidence that this current model was unable to tease them apart
+            because of their temporal correlation.
             """
         )
     st.markdown(
@@ -98,6 +99,7 @@ def write():
     st.sidebar.markdown("# Forecasting Options")
     st.sidebar.markdown("***")
     st.sidebar.markdown("## Carbohydrates")
+    st.sidebar.markdown("Current time is {}".format(current_time))
     meal_t = st.sidebar.select_slider(
         label="How many minutes until your next meal?", options=time_list
     )

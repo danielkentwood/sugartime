@@ -97,16 +97,18 @@ def write():
             we can use the model to perform inference on data from the
             testing set here.
 
-            The base algorithm used here is a support vector machine.
+            The time series model is auto-regressive with exogenous variables
+            (ARX). The base algorithm used in such a model can be any
+            regression algorithm; here I currently use a support vector
+            machine.
 
-            Note that this model has essentially learned to revert to the mean.
             The full model actually consists of several models, each
             individually
             fit to a different lag of the target variable. In other words,
             there
-            is one model fit to the glucose data at time *t*, another fit to
+            is one model fit to the glucose data at time *t+1*, another fit to
             the
-            glucose data at time *t+1*, another at *t+2*, etc.,
+            glucose data at time *t+2*, another at *t+3*, etc.,
             all the way up to the
             selected horizon of the model (which defaults to 12 steps of 5
             minutes
@@ -117,11 +119,13 @@ def write():
             the *endogenous* or *target* variable, order of the *exogenous*
             variables, and/or delay of the exogenous variables) at that time
             step.
-            As the inference step gets farther away
-            from the current time *t*, the less accurate the inference.
-            Instead of
-            relying on the exogenous variables (i.e., carbohydrates and
-            insulin),
+
+            Note that this model has essentially learned to revert to the mean.
+            Since there is considerable autocorrelation in data from continuous
+            glucose monitors, inference becomes less acurrate as the inference
+            step gets farther away from the current time *t*.
+            Here, instead of relying on the exogenous variables (i.e.,
+            carbohydrates and insulin),
             the model does a better job by increasingly bringing the predicted
             value back to the mean, which for this patient is a blood glucose
             level of approximately 100 mg/dL.
@@ -129,11 +133,9 @@ def write():
             yet
             to find an estimator/algorithm that doesn't converge on this
             strategy
-            to some extent, which suggests that the exogenous variables are
-            simply
-            not predictive enough to account for significant variance beyond
-            the
-            autoregressive component of this model.
+            to some extent, which suggests that these two exogenous variables
+            are simply not predictive enough to account for significant
+            variance beyond the autoregressive component of this model.
             """
         )
     st.markdown(

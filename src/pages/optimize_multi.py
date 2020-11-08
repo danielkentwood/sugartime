@@ -73,6 +73,7 @@ def write():
     st.sidebar.markdown("# Optimization Options")
     st.sidebar.markdown("***")
     st.sidebar.markdown("## Carbohydrates")
+    st.sidebar.markdown("Current time is {}".format(current_time))
     meal_t = st.sidebar.select_slider(
         label="How many minutes until your next meal?", options=time_list
     )
