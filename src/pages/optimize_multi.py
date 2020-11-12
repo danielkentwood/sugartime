@@ -3,7 +3,7 @@ import pickle
 
 import streamlit as st
 
-from sugarTS import core
+from sugartime import core
 
 
 @st.cache
@@ -18,7 +18,7 @@ def load_saved_model():
 def write():
     st.markdown(
         """
-        # Sugar
+        # SugarTime
         ### Optimizing meals and insulin
         Here you can plan out your meal and ask the model to provide
         a recommendation for insulin (i.e., when and how much) that is

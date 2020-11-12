@@ -3,7 +3,7 @@ import pickle
 
 import streamlit as st
 
-from sugarTS import core
+from sugartime import core
 
 
 @st.cache
@@ -18,7 +18,7 @@ def load_saved_model():
 def write():
     st.markdown(
         """
-        # Sugar
+        # SugarTime
         ### Forecasting
         What has the model learned about the exogenous variables? Use
         this page to explore this question.

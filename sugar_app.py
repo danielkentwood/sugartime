@@ -16,7 +16,7 @@ PAGES = {
 def main():
 
     # create sidebar
-    st.sidebar.markdown("# Sugar")
+    st.sidebar.markdown("# SugarTime")
     st.sidebar.markdown(
         """
         Helping Type-1 diabetics stay in range.

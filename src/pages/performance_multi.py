@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import pandas as pd
 import streamlit as st
 
-from sugarTS import core
+from sugartime import core
 
 
 @st.cache
@@ -83,7 +83,7 @@ def plot_test_set(patient, start_time):
 def write():
     st.markdown(
         """
-        # Sugar
+        # SugarTime
         ### Model Performance
         This page lets you visualize how the model performs on data that
         it hasn't seen yet.

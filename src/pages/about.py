@@ -4,7 +4,7 @@ import streamlit as st
 def write():
     st.markdown(
         """
-        # Sugar
+        # SugarTime
         ### About
 
         This is a demo of a decision-support application designed to
