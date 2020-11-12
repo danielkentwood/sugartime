@@ -24,7 +24,7 @@ To install, use pip.
 
 To get the latest development version:
 
-```
+```python
 git clone https://github.com/danielkentwood/sugartime
 cd sugartime
 pip install -e .
@@ -36,7 +36,7 @@ pip install -e .
 
 * Load your own data into a patient object:
 
-```
+```python
 from sugartime.model import Patient
 import numpy as np
 
@@ -52,7 +52,7 @@ patient.load_data(X, y)
 
 * Load preprocessed example patient data and split into training and test sets:
 
-```
+```python
 from sugartime.model import Patient
 
 patient = Patient()
@@ -67,7 +67,7 @@ patient.split_data(
 
 * Train a multioutput NARX model with a `RandomForestRegressor` base model:
 
-```
+```python
 from sugartime.model import MultiOutModel
 from sklearn.ensemble import RandomForestRegressor
 
@@ -85,7 +85,7 @@ mdl.fit(
 
 * Perform grid search on the design hyperparameters to find the optimal autoregression order, exogenous input order, and exogenous input delay for each output step:
 
-```
+```python
 from sklearn.linear_model import LinearRegression
 from itertools import product
 	
@@ -112,7 +112,7 @@ In the **SugarTime** package, forecasting comes in three flavors: (1) multioutpu
 
 * _Multioutput forecasting_ doesn't take into account any future information; based on information up to time `t`, it performs inference for `t+1, t+2,...t+n`, where `n` is the horizon of the model.
 
-```
+```python
 # After fitting model, perform multioutput forecast
 ypred = mdl.multioutput_forecast(
     patient.Xtest, patient.ytest
@@ -121,7 +121,7 @@ ypred = mdl.multioutput_forecast(
 
 *  _Dynamic forecasting_ only uses the `t+1` model and iteratively updates the history of the endogenous variable with each consecutive inference. This can take into account future information (e.g., about timing and amount of carbohydrates and insulin).
 
-```
+```python
 from datetime import timedelta
 
 # After fitting model, define forecast start time 
@@ -143,7 +143,7 @@ ypred = mdl.dynamic_forecast(
 * _Hybrid forecasting_ iteratively performs multioutput forecasting such that each output step of the model is a weighted average of all previous overlapping forecasts as well as the present forecast. For example, if the multioutput model has a horizon of 3, then the 3rd output step would be a weighted average of output step 1 from the multioutput forecast at `t+3`, output step 2 from the multioutput forecast at `t+2`, and output step 3 from the multioutput forecast at `t+1`. 
 
 
-```
+```python
 # after defining the future information, perform hybrid forecast
 ypred = mdl.hybrid_forecast(
     mdl.patient.Xtest,
