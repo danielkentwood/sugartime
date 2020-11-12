@@ -167,9 +167,7 @@ UPDATE: I'm also trying out the beta version of Streamlit Sharing, so you can fi
 
 Here is an example of the app UI:
 
-<kbd>
 ![Optimization example](./src/images/optim_example.png)
-</kbd>
 
 ### Local testing of the web app
 
