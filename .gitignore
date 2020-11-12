@@ -3,3 +3,6 @@
 .gitattributes
 __pycache__
 .DS_Store
+sugartime.egg-info/
+dist/
+build/
