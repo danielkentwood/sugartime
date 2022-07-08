@@ -1,5 +1,5 @@
 pandas==1.1.2
-numpy==1.19.2
+numpy==1.22.0
 fireTS==0.0.8
 plotly==4.12.0
 scikit_learn==0.23.2
